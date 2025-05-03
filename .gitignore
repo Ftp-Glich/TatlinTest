@@ -1,0 +1,5 @@
+/build
+/src/data/input/*
+/src/data/output/*
+/src/data/tmp/*
+/.vscode
