@@ -22,10 +22,8 @@ target_link_libraries(tests
         tatlin_lib
 )
 
-target_compile_definitions(tests PRIVATE
-    TEST_INPUT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data/input/"
-    TEST_OUTPUT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data/output/"
-    TEST_TMP_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data/tmp/"
+target_include_directories(tests PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/../data
 )
 
 target_include_directories(tests PRIVATE

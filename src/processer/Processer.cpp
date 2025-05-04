@@ -1,7 +1,8 @@
 #include "Processer.h"
 
-Processer::Processer(int memory, int number, const std::string& input, const std::string& output, const std::string& latencies)
-:M(memory), N(number), input_name(input), output_name(output){
+Processer::Processer(int memory, int number, const std::string& path, const std::string& input, const std::string& output, const std::string& latencies)
+:M(memory), N(number), input_dir(path + "input/"),
+ output_dir(path + "output/"), tmp_dir(path + "tmp/"), input_name(input), output_name(output) {
     parseLatency(latencies);
     prepareTempDirectory(tmp_dir);
     generateRandomInputFile(input_dir + input_name, N);
@@ -14,7 +15,6 @@ void Processer::prepareTempDirectory(const std::string& temp_dir) {
         fs::path dir_path(temp_dir);
 
         if (fs::exists(dir_path)) {
-            std::cout << "Clearing temp directory: " << dir_path << "\n";
             for (const auto& entry : fs::directory_iterator(dir_path)) {
                 fs::remove_all(entry.path());
             }
@@ -56,7 +56,7 @@ void Processer::generateRandomInputFile(const std::string& filename, size_t N, i
     if (min_val >= max_val) {
         throw std::invalid_argument("Invalid range: min_val must be less than max_val");
     }
-
+    if(std::filesystem::exists(filename)) return;
     std::ofstream outfile(filename);
     if (!outfile.is_open()) {
         throw std::runtime_error("Failed to open file: " + filename);

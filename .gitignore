@@ -2,4 +2,9 @@
 /src/data/input/*
 /src/data/output/*
 /src/data/tmp/*
+/tests/data/input/*
+/tests/data/output/*
+/tests/data/tmp/*
+/tests/data/*.conf
+
 /.vscode
