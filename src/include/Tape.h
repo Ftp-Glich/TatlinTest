@@ -3,7 +3,11 @@
 #include <sstream> 
 #include <thread>
 #include <chrono>
+#include <vector>
 #include <iostream>
+#include <algorithm>
+#include <cmath>
+#include <filesystem>
 #include <map>
 
 using Latencies = std::map<std::string, int>;
@@ -15,11 +19,15 @@ public:
 
     void operator<<(int buffer);
 
-    void operator>>(int& data);
+    bool operator>>(int& data);
 
     void rewind(int dist);
 
     void setToStart();
+
+    void close();
+    
+    void open();
 
 private:
     Latencies latency_m;

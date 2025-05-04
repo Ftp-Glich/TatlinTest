@@ -18,4 +18,14 @@ private:
                 tmp_dir{"src/data/tmp/"};
 
     void parseLatency(const std::string& file);
+
+    void sortAndWrite(std::vector<int>& vec, int count);
+
+    void writeToTape(const std::vector<int>& vec, const std::string& file);
+
+    void prepareTempDirectory(const std::string& temp_dir);
+
+    void createSubseq();
+
+    void mergeSubseq();
 };
