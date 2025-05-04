@@ -4,6 +4,7 @@ Processer::Processer(int memory, int number, const std::string& input, const std
 :M(memory), N(number), input_name(input), output_name(output){
     parseLatency(latencies);
     prepareTempDirectory(tmp_dir);
+    generateRandomInputFile(input_dir + input_name, N);
 }
 
 
@@ -27,6 +28,18 @@ void Processer::prepareTempDirectory(const std::string& temp_dir) {
     }
 }
 
+void Processer::checkSortition() {
+    std::ifstream sorted(output_dir + output_name);
+    int num, prev;
+    sorted >> prev;
+    while (sorted >> num)
+    {
+        assert(prev <= num);
+        prev = num;
+    }
+    sorted.close();
+}
+
 void Processer::parseLatency(const std::string& file) {
     std::ifstream config(file);
     std::string buffer;
@@ -36,6 +49,46 @@ void Processer::parseLatency(const std::string& file) {
         int val;
         ss >> name >> val;
         latencies_m[name] = val;
+    }
+}
+
+void Processer::generateRandomInputFile(const std::string& filename, size_t N, int min_val, int max_val) {
+    if (min_val >= max_val) {
+        throw std::invalid_argument("Invalid range: min_val must be less than max_val");
+    }
+
+    std::ofstream outfile(filename);
+    if (!outfile.is_open()) {
+        throw std::runtime_error("Failed to open file: " + filename);
+    }
+
+    std::random_device rd;
+    std::mt19937_64 gen(rd());
+    std::uniform_int_distribution<int> distrib(min_val, max_val);
+
+    constexpr size_t BUFFER_SIZE = 100000;
+    std::vector<int> buffer;
+    buffer.reserve(BUFFER_SIZE);
+
+    for (size_t i = 0; i < N; ++i) {
+        buffer.push_back(distrib(gen));
+        
+        if (buffer.size() >= BUFFER_SIZE) {
+            for (auto num : buffer) {
+                outfile << num << '\n';
+            }
+            buffer.clear();
+        }
+    }
+
+    if (!buffer.empty()) {
+        for (auto num : buffer) {
+            outfile << num << '\n';
+        }
+    }
+
+    if (!outfile.good()) {
+        throw std::runtime_error("Error occurred while writing to file");
     }
 }
 
@@ -117,8 +170,8 @@ void Processer::mergeSubseq() {
     }
 }
 
-
 void Processer::sort() {
     createSubseq();
     mergeSubseq();
+    checkSortition();
 }

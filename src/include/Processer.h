@@ -27,5 +27,9 @@ private:
 
     void createSubseq();
 
+    void generateRandomInputFile(const std::string& filename, size_t N, int min_val = -1000000, int max_val = 1000000);
+
     void mergeSubseq();
+
+    void checkSortition();
 };

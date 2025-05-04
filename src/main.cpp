@@ -1,6 +1,6 @@
 #include "Processer.h"
 
 int main() {
-    Processer processer(16, 17, "input.txt", "output.txt", "latency.txt");
+    Processer processer(100, 10000, "input_big.txt", "output_big.txt", "latency.txt");
     processer.sort();
 }

@@ -12,6 +12,21 @@ Tape::Tape(const std::string& file, const Latencies& latency)
     }
 }
 
+Tape::Tape(Tape&& other) noexcept 
+    : filename(std::move(other.filename)),
+      latency_m(std::move(other.latency_m)),
+      stream(std::move(other.stream)) {
+}
+
+Tape& Tape::operator=(Tape&& other) noexcept {
+    if (this != &other) {
+        filename = std::move(other.filename);
+        latency_m = std::move(other.latency_m);
+        stream = std::move(other.stream);
+    }
+    return *this;
+}
+
 void Tape::close() { stream.close(); }
 
 void Tape::open() { stream.open(filename, std::ios::in | std::ios::out); }
@@ -47,4 +62,8 @@ void Tape::rewind(int dist) {
 
 void Tape::setToStart() {
     this->rewind(-stream.tellp());
+}
+
+Tape::~Tape() {
+    if(stream.is_open()) stream.close();
 }
