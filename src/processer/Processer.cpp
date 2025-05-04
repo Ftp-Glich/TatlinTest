@@ -26,6 +26,14 @@ void Processer::prepareTempDirectory(const std::string& temp_dir) {
     } catch (...) {
         std::cerr << "Unknown error preparing temp directory\n";
     }
+    try {
+        fs::path out_path(output_dir + output_name);
+        if (fs::exists(out_path)) fs::remove(out_path);        
+    } catch (const fs::filesystem_error& e) {
+        std::cerr << "Filesystem error: " << e.what() << "\n";
+    } catch (...) {
+        std::cerr << "Unknown error preparing temp directory\n";
+    }
 }
 
 void Processer::checkSortition() {
