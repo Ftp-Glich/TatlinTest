@@ -13,31 +13,15 @@ Tape::Tape(const std::string& file, const Latencies& latency)
 }
 
 Tape::Tape(Tape&& other) noexcept 
-    : filename(std::move(other.filename)),
-      latency_m(std::move(other.latency_m)),
-      stream(std::move(other.stream)) {
-}
-
-Tape& Tape::operator=(Tape&& other) noexcept {
-    if (this != &other) {
-        filename = std::move(other.filename);
-        latency_m = std::move(other.latency_m);
-        stream = std::move(other.stream);
-    }
-    return *this;
+: filename(std::move(other.filename)),
+latency_m(std::move(other.latency_m)),
+stream(std::move(other.stream)) {
+    other.stream.close();
 }
 
 void Tape::close() { stream.close(); }
 
 void Tape::open() { stream.open(filename, std::ios::in | std::ios::out); }
-
-void Tape::operator<<(int buffer) {
-    auto start = std::chrono::high_resolution_clock::now();
-    stream << buffer << "\n";
-    auto diff = std::chrono::milliseconds(latency_m["write"] + latency_m["shift"]) - 
-        std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start);
-    if(diff.count() > 0) std::this_thread::sleep_for(diff);
-}
 
 bool Tape::operator>>(int& data) {
     auto start = std::chrono::high_resolution_clock::now();
@@ -49,6 +33,17 @@ bool Tape::operator>>(int& data) {
     } else {
         return false;
     }
+}
+
+Tape& Tape::operator<<(int buffer) {
+    auto start = std::chrono::high_resolution_clock::now();
+    stream << buffer << "\n";
+    auto diff = std::chrono::milliseconds(latency_m["write"] + latency_m["shift"]) - 
+        std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::high_resolution_clock::now() - start
+        );
+    if(diff.count() > 0) std::this_thread::sleep_for(diff);
+    return *this;  
 }
 
 void Tape::rewind(int dist) {

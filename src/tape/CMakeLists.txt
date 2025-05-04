@@ -1,6 +1,8 @@
-add_library(tape STATIC tape.cpp)
+add_library(tape STATIC
+    Tape.cpp
+)
 
-target_include_directories(tape PRIVATE 
-    ${PROJECT_SOURCE_DIR}/src/include
-    ${PROJECT_SOURCE_DIR}/src/data
+target_include_directories(tape PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/../include
+    ${CMAKE_CURRENT_SOURCE_DIR}/../data
 )

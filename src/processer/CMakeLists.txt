@@ -1,5 +1,8 @@
-add_library(processer STATIC Processer.cpp)
+add_library(processer STATIC
+    Processer.cpp
+)
 
-target_include_directories(processer PUBLIC 
-    ${PROJECT_SOURCE_DIR}/src/include
+target_include_directories(processer PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/../include
+    ${CMAKE_CURRENT_SOURCE_DIR}/../data
 )

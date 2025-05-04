@@ -28,7 +28,7 @@ public:
 
     ~Tape();
 
-    void operator<<(int buffer);
+    Tape& operator<<(int buffer);
 
     bool operator>>(int& data);
 
