@@ -40,6 +40,10 @@ public:
     
     void open();
 
+    void reopen();
+
+    std::string get_filename() const { return filename; };
+
 private:
     Latencies latency_m;
     std::string filename;
