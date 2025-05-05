@@ -1,7 +1,14 @@
 #include "TapePool.h"
 
-TapePool::TapePool(const Latencies& lats, const std::string& path, size_t group_size, size_t max_open_files):
-    max_open_files_(max_open_files), group_size_(group_size), latencies_(lats), tmp_dir(path + "tmp/") {
+TapePool::TapePool(const Latencies& lats, const std::string& path, size_t M):
+    latencies_(lats), tmp_dir(path + "tmp/") {
+        if (group_size_ > max_open_files_) {
+            group_size_ = max_open_files_; 
+        }
+    
+        if (max_open_files_ > M / 4) {
+            max_open_files_ = M / 4; 
+        }
         workers_.reserve(std::thread::hardware_concurrency());
     }
 
@@ -25,7 +32,7 @@ void TapePool::merge(std::vector<std::unique_ptr<Tape>>&& input_tapes, const std
     std::unique_lock lock(mtx_);
     cv_done_.wait(lock);
     cv_.notify_all();
-    for(auto& th: workers_) th.detach();
+    for(auto& th: workers_) th.join();
 }
 
 void TapePool::schedule_merge_task(std::vector<std::unique_ptr<Tape>>&& inputs, const std::string& output_name) {
@@ -98,7 +105,7 @@ void TapePool::worker_thread() {
     while(running.load()) {
         std::unique_lock lock(mtx_);
         cv_.wait(lock, [&] { 
-            return !task_queue_.empty() || !running.load(); 
+            return !running.load(); 
         });
 
         if(task_queue_.empty() && !running.load()) {

@@ -22,7 +22,7 @@ struct MergeTask {
 
 class TapePool {
     public:
-        TapePool(const Latencies& lats, const std::string& path, size_t group_size = 4, size_t max_open_files = 500);
+        TapePool(const Latencies& lats, const std::string& path, size_t M);
         
         void merge(std::vector<std::unique_ptr<Tape>>&& input_tapes, const std::string& output);
         

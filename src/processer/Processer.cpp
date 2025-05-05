@@ -144,7 +144,7 @@ void Processer::mergeSubseq() {
     for(int i = 0; i < tmp_num; ++i) {
         tapes.emplace_back(std::move(std::make_unique<Tape>(tmp_dir + std::to_string(i) + ".txt", latencies_m)));
     }
-    TapePool pool(latencies_m, "src/data/");
+    TapePool pool(latencies_m, "src/data/", M);
     pool.merge(std::move(tapes), output_dir + output_name);
 }
 
