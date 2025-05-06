@@ -39,12 +39,15 @@ void Processer::prepareTempDirectory(const std::string& temp_dir) {
 void Processer::checkSortition() {
     std::ifstream sorted(output_dir + output_name);
     int num, prev;
+    size_t amount = 1;
     sorted >> prev;
     while (sorted >> num)
     {
+        ++amount;
         assert(prev <= num);
         prev = num;
     }
+    assert(amount == N);
     sorted.close();
 }
 

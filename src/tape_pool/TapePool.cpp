@@ -31,7 +31,10 @@ void TapePool::merge(std::vector<std::unique_ptr<Tape>>&& input_tapes, const std
     
     std::unique_lock lock(mtx_);
     cv_done_.wait(lock);
+    lock.unlock();
+    running.store(false);
     cv_.notify_all();
+    cv_files_.notify_all();
     for(auto& th: workers_) th.join();
 }
 
@@ -74,7 +77,6 @@ void TapePool::finalize_merge(std::unique_ptr<Tape>&& tape) {
     std::string src = tape->get_filename();
     namespace fs = std::filesystem;
     fs::rename(fs::path(src), fs::path(output_name_));
-    running.store(false);
     cv_done_.notify_one();
 }
 
@@ -104,12 +106,13 @@ void TapePool::try_make_task(std::unique_ptr<Tape>&& tape) {
 void TapePool::worker_thread() {
     while(running.load()) {
         std::unique_lock lock(mtx_);
+        std::cout << "to cv" << std::endl;
         cv_.wait(lock, [&] { 
-            return !running.load(); 
+            return !task_queue_.empty() || !running.load(); 
         });
 
-        if(task_queue_.empty() && !running.load()) {
-            cv_done_.notify_one();
+        if(!running.load() && task_queue_.empty()) {
+            cv_done_.notify_all();
             return;
         }
         auto task = std::move(task_queue_.front());
