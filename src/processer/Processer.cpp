@@ -2,7 +2,7 @@
 
 Processer::Processer(int memory, int number, const std::string& path, const std::string& input, const std::string& output, const std::string& latencies)
 :M(memory), N(number), input_dir(path + "input/"),
- output_dir(path + "output/"), tmp_dir(path + "tmp/"), input_name(input), output_name(output), latency_file(path + latencies) {
+ output_dir(path + "output/"), tmp_dir(path + "tmp/"), input_name(input), output_name(output), latency_file(path + latencies), data_path(path) {
     parseLatency(latencies);
     prepareTempDirectory(tmp_dir);
     generateRandomInputFile(input_dir + input_name, N);
@@ -37,6 +37,7 @@ void Processer::prepareTempDirectory(const std::string& temp_dir) {
 }
 
 void Processer::checkSortition() {
+    if(N == 0) return;
     std::ifstream sorted(output_dir + output_name);
     int num, prev;
     size_t amount = 1;
@@ -116,7 +117,7 @@ std::unique_ptr<Tape> Processer::sortAndWrite(std::vector<int>& vec, int count) 
 }
 
 void Processer::sort() {
-    TapePool pool(latencies_m, "src/data/", M);
+    TapePool pool(latencies_m, data_path, M);
     pool.start(output_dir + output_name);
     Tape input_tape(input_dir + input_name, latencies_m);
     std::vector<int> tmp(M/4);
@@ -137,7 +138,6 @@ void Processer::sort() {
         pool.submit(sortAndWrite(tmp, count));
         ++count;
     }
-    pool.finalize_input();
     pool.wait();
     checkSortition();
 }

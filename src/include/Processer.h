@@ -27,6 +27,7 @@ private:
     std::string input_name, output_name;
 
     std::string input_dir, output_dir, tmp_dir, latency_file;
+    std::string data_path;
 
     void parseLatency(const std::string& file);
 

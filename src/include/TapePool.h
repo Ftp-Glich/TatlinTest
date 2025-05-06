@@ -27,7 +27,6 @@ class TapePool {
         
         void start(const std::string& output);
         void submit(std::unique_ptr<Tape>&& tape);
-        void finalize_input();
         void wait();
         
     private:
