@@ -4,6 +4,7 @@ test task for Yadro impulse
 # Build
  
 download [vcpkg](https://github.com/microsoft/vcpkg)
+
 cmake --build ${workspaceFolder}/build -DCMAKE_TOOLCHAIN_FILE=path/to/vcpkg.cmake --config Release
 
 # Run
