@@ -2,6 +2,7 @@
 
 Tape::Tape(const std::string& file, const Latencies& latency)
     : filename(file), stream(filename, std::ios::in | std::ios::out | std::ios::app), latency_m(latency) {  
+    for(auto it = latency_m.begin(); it != latency_m.end(); ++it) assert(it->second >= 0);
     if (!stream.is_open()) { 
         stream.open(filename, std::ios::out);  
         stream.close();
