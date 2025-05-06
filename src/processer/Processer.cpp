@@ -39,12 +39,15 @@ void Processer::prepareTempDirectory(const std::string& temp_dir) {
 void Processer::checkSortition() {
     std::ifstream sorted(output_dir + output_name);
     int num, prev;
+    size_t amount = 1;
     sorted >> prev;
     while (sorted >> num)
     {
+        ++amount;
         assert(prev <= num);
         prev = num;
     }
+    assert(amount == N);
     sorted.close();
 }
 
@@ -103,6 +106,7 @@ void Processer::generateRandomInputFile(const std::string& filename, size_t N, i
 void Processer::writeToTape(const std::vector<int>& vec, const std::string& file) {
     Tape tape(file, latencies_m);
     for(auto& el: vec) tape << el;
+    tape.close();
 }
 
 void Processer::sortAndWrite(std::vector<int>& vec, int count) {
@@ -134,48 +138,17 @@ void Processer::createSubseq() {
     }
 }
 
-size_t findMin(const std::vector<int>& vec, const std::vector<bool>& active) {
-    size_t res = 0;
-    int min_val = INT32_MAX;
-    for(size_t i = 0; i < vec.size(); ++i) {
-        if(active[i] && vec[i] < min_val) {
-            res = i;
-            min_val = vec[i];
-        }
-    }
-    return res;
-}
-
 void Processer::mergeSubseq() {
-    Tape output_tape(output_dir + output_name, latencies_m);
     int chunk_size = M / 4;
     int tmp_num = (N + chunk_size - 1) / chunk_size;
 
-    std::vector<Tape> tapes;
+    std::vector<std::unique_ptr<Tape>> tapes;
     tapes.reserve(tmp_num);
     for(int i = 0; i < tmp_num; ++i) {
-        tapes.emplace_back(tmp_dir + std::to_string(i) + ".txt", latencies_m);
+        tapes.emplace_back(std::move(std::make_unique<Tape>(tmp_dir + std::to_string(i) + ".txt", latencies_m)));
     }
-
-    std::vector<int> nums(tmp_num);
-    std::vector<bool> active(tmp_num, false);
-
-    for(int i = 0; i < tmp_num; ++i) {
-        if (tapes[i] >> nums[i]) {
-            active[i] = true;
-        } else {
-            active[i] = false; 
-        }
-    }
-
-    for(int i = 0; i < N; ++i) {
-        size_t idx = findMin(nums, active);
-        output_tape << nums[idx];
-
-        if (!(tapes[idx] >> nums[idx])) {
-            active[idx] = false;
-        }
-    }
+    TapePool pool(latencies_m, "src/data/", M);
+    pool.merge(std::move(tapes), output_dir + output_name);
 }
 
 void Processer::sort() {

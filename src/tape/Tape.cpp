@@ -59,6 +59,13 @@ void Tape::setToStart() {
     this->rewind(-stream.tellp());
 }
 
+void Tape::reopen() {
+    stream.open(filename, std::ios::out | std::ios::trunc); 
+    stream.close(); 
+    stream.open(filename, std::ios::in | std::ios::out); 
+    setToStart(); 
+}
+
 Tape::~Tape() {
     if(stream.is_open()) stream.close();
 }
