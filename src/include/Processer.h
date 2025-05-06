@@ -15,9 +15,9 @@ public:
 
     void checkSortition();
 
-    void sortAndWrite(std::vector<int>& vec, int count);
+    std::unique_ptr<Tape> sortAndWrite(std::vector<int>& vec, int count);
 
-    void writeToTape(const std::vector<int>& vec, const std::string& file);
+    std::unique_ptr<Tape> writeToTape(const std::vector<int>& vec, const std::string& file);
 
 private:
     int M, N;
@@ -27,6 +27,7 @@ private:
     std::string input_name, output_name;
 
     std::string input_dir, output_dir, tmp_dir, latency_file;
+    std::string data_path;
 
     void parseLatency(const std::string& file);
 

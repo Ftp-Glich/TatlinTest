@@ -1,6 +1,7 @@
 #include "Tape.h"
 #include <queue>
 #include <unordered_map>
+#include <optional>
 
 struct MergeTask {
     std::vector<std::unique_ptr<Tape>> inputs;
@@ -22,15 +23,17 @@ struct MergeTask {
 
 class TapePool {
     public:
-        TapePool(const Latencies& lats, const std::string& path, size_t M);
+        TapePool(const Latencies& lats, const std::string& path, size_t M, size_t group_size = 4, size_t max_open_files = 500);
         
-        void merge(std::vector<std::unique_ptr<Tape>>&& input_tapes, const std::string& output);
+        void start(const std::string& output);
+        void submit(std::unique_ptr<Tape>&& tape);
+        void wait();
         
     private:
         void worker_thread();
         std::unique_ptr<Tape> acquire_tape(const std::string& filename);
         void schedule_merge_task(std::vector<std::unique_ptr<Tape>>&& inputs, const std::string& output);   
-        void try_make_task(std::unique_ptr<Tape>&& tape);
+        
         void release_tape(std::unique_ptr<Tape>&& tape);
         void perform_kway_merge(const MergeTask& task);
         void finalize_merge(std::unique_ptr<Tape>&& tape);
@@ -44,6 +47,7 @@ class TapePool {
         std::atomic<uint32_t> tmp_id_{0};
         std::atomic<uint32_t> opened_files_{0};
         std::atomic<bool> running{false};
+        std::atomic<bool> all_tasks_{false};
 
         std::queue<std::unique_ptr<Tape>> tape_recycle_bin_; 
         std::queue<MergeTask> task_queue_;

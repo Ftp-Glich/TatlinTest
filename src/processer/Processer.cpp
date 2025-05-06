@@ -2,7 +2,7 @@
 
 Processer::Processer(int memory, int number, const std::string& path, const std::string& input, const std::string& output, const std::string& latencies)
 :M(memory), N(number), input_dir(path + "input/"),
- output_dir(path + "output/"), tmp_dir(path + "tmp/"), input_name(input), output_name(output), latency_file(path + latencies) {
+ output_dir(path + "output/"), tmp_dir(path + "tmp/"), input_name(input), output_name(output), latency_file(path + latencies), data_path(path) {
     parseLatency(latencies);
     prepareTempDirectory(tmp_dir);
     generateRandomInputFile(input_dir + input_name, N);
@@ -37,6 +37,7 @@ void Processer::prepareTempDirectory(const std::string& temp_dir) {
 }
 
 void Processer::checkSortition() {
+    if(N == 0) return;
     std::ifstream sorted(output_dir + output_name);
     int num, prev;
     size_t amount = 1;
@@ -103,19 +104,21 @@ void Processer::generateRandomInputFile(const std::string& filename, size_t N, i
     }
 }
 
-void Processer::writeToTape(const std::vector<int>& vec, const std::string& file) {
-    Tape tape(file, latencies_m);
-    for(auto& el: vec) tape << el;
-    tape.close();
+std::unique_ptr<Tape> Processer::writeToTape(const std::vector<int>& vec, const std::string& file) {
+    std::unique_ptr<Tape> tape(std::make_unique<Tape>(file, latencies_m));
+    for(auto& el: vec) *(tape) << el;
+    return tape;
 }
 
-void Processer::sortAndWrite(std::vector<int>& vec, int count) {
+std::unique_ptr<Tape> Processer::sortAndWrite(std::vector<int>& vec, int count) {
     std::stable_sort(vec.begin(), vec.end());
     std::string filename = tmp_dir + std::to_string(count) + ".txt";
-    writeToTape(vec, filename);
+    return writeToTape(vec, filename);
 }
 
-void Processer::createSubseq() {
+void Processer::sort() {
+    TapePool pool(latencies_m, data_path, M);
+    pool.start(output_dir + output_name);
     Tape input_tape(input_dir + input_name, latencies_m);
     std::vector<int> tmp(M/4);
     size_t j = 0, count = 0;
@@ -125,34 +128,16 @@ void Processer::createSubseq() {
         tmp[j] = num;
         ++j;
         if(j == M/4) {
-            sortAndWrite(tmp, count);
-
+            pool.submit(sortAndWrite(tmp, count));
             ++count;
             j = 0;
         }
     }
     if (j > 0) {
         tmp.resize(j);
-        sortAndWrite(tmp, count);
+        pool.submit(sortAndWrite(tmp, count));
         ++count;
     }
-}
-
-void Processer::mergeSubseq() {
-    int chunk_size = M / 4;
-    int tmp_num = (N + chunk_size - 1) / chunk_size;
-
-    std::vector<std::unique_ptr<Tape>> tapes;
-    tapes.reserve(tmp_num);
-    for(int i = 0; i < tmp_num; ++i) {
-        tapes.emplace_back(std::move(std::make_unique<Tape>(tmp_dir + std::to_string(i) + ".txt", latencies_m)));
-    }
-    TapePool pool(latencies_m, "src/data/", M);
-    pool.merge(std::move(tapes), output_dir + output_name);
-}
-
-void Processer::sort() {
-    createSubseq();
-    mergeSubseq();
+    pool.wait();
     checkSortition();
 }
