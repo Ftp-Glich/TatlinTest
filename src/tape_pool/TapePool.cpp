@@ -1,6 +1,7 @@
 #include "TapePool.h"
 
-TapePool::TapePool(const Latencies& lats, const std::string& path, size_t M):
+TapePool::TapePool(const Latencies& lats, const std::string& path, size_t M, size_t group_size, size_t max_open_files):
+    group_size_(group_size), max_open_files_(max_open_files),
     latencies_(lats), tmp_dir(path + "tmp/") {
         if (group_size_ > max_open_files_) {
             group_size_ = max_open_files_; 
@@ -12,23 +13,16 @@ TapePool::TapePool(const Latencies& lats, const std::string& path, size_t M):
         workers_.reserve(std::thread::hardware_concurrency());
     }
 
-void TapePool::merge(std::vector<std::unique_ptr<Tape>>&& input_tapes, const std::string& output) {
+void TapePool::start(const std::string& output) {
     output_name_ = output;
     running.store(true);
     for(size_t i = 0; i < std::thread::hardware_concurrency(); ++i) {
         workers_.emplace_back(&TapePool::worker_thread, this);
     }
-    auto it = input_tapes.begin();
-    while(it != input_tapes.end()) {
-        std::vector<std::unique_ptr<Tape>> group;
-        for(size_t i = 0; i < group_size_ && it != input_tapes.end(); ++i, ++it) {
-            group.push_back(std::move(*it));
-        }
-        auto output_name = tmp_dir + "merge_" + std::to_string(tmp_id_.fetch_add(1)) + ".txt";
-        schedule_merge_task(std::move(group), output_name);
-        std::cout << "made task" << std::endl;
-    }
     
+}
+
+void TapePool::wait() {
     std::unique_lock lock(mtx_);
     cv_done_.wait(lock);
     lock.unlock();
@@ -37,6 +31,8 @@ void TapePool::merge(std::vector<std::unique_ptr<Tape>>&& input_tapes, const std
     cv_files_.notify_all();
     for(auto& th: workers_) th.join();
 }
+
+void TapePool::finalize_input() { all_tasks_.store(true); }
 
 void TapePool::schedule_merge_task(std::vector<std::unique_ptr<Tape>>&& inputs, const std::string& output_name) {
     auto output = acquire_tape(output_name);
@@ -66,9 +62,9 @@ std::unique_ptr<Tape> TapePool::acquire_tape(const std::string& filename) {
 void TapePool::release_tape(std::unique_ptr<Tape>&& tape) {
     std::unique_lock lock(mtx_);
     opened_files_--;
+    tape->close();
     tape_recycle_bin_.push(std::move(tape));
     cv_files_.notify_all();
-    std::cout << "released tape" << std::endl;
 
 }
 
@@ -80,11 +76,11 @@ void TapePool::finalize_merge(std::unique_ptr<Tape>&& tape) {
     cv_done_.notify_one();
 }
 
-void TapePool::try_make_task(std::unique_ptr<Tape>&& tape) {
+void TapePool::submit(std::unique_ptr<Tape>&& tape) {
     std::unique_lock lock(mtx_ready_);
     tape->setToStart();
     ready.emplace_back(std::move(tape));
-    if ((ready.size() > 1 && ready.size() <= group_size_)) {
+    if ((ready.size() == group_size_) || (ready.size() > 1 && ready.size() <= group_size_ && active_count_ == 0 && all_tasks_.load())) {
         
         std::vector<std::unique_ptr<Tape>> new_group;
         new_group.reserve(group_size_);
@@ -96,9 +92,8 @@ void TapePool::try_make_task(std::unique_ptr<Tape>&& tape) {
         
         auto output_name = tmp_dir + "merge_" + std::to_string(tmp_id_++) + ".txt";
         schedule_merge_task(std::move(new_group), output_name);
-        std::cout << "making new task" << std::endl; 
     }
-    if (task_queue_.empty() && ready.size() == 1 && active_count_ == 0) {
+    if (task_queue_.empty() && ready.size() == 1 && active_count_ == 0 && all_tasks_.load()) {
         finalize_merge(std::move(ready[0]));
     }
 }
@@ -106,7 +101,6 @@ void TapePool::try_make_task(std::unique_ptr<Tape>&& tape) {
 void TapePool::worker_thread() {
     while(running.load()) {
         std::unique_lock lock(mtx_);
-        std::cout << "to cv" << std::endl;
         cv_.wait(lock, [&] { 
             return !task_queue_.empty() || !running.load(); 
         });
@@ -119,13 +113,12 @@ void TapePool::worker_thread() {
         task_queue_.pop();
         active_count_++;
         lock.unlock();
-        std::cout << "got task" << std::endl;
         perform_kway_merge(task);
         for(auto& tape : task.inputs) {
             release_tape(std::move(tape));
         }
         active_count_--;
-        try_make_task(std::move(task.output));
+        submit(std::move(task.output));
     }
 }
 
@@ -147,7 +140,7 @@ void TapePool::perform_kway_merge(const MergeTask& task) {
     std::vector<int> nums(size);
     std::vector<bool> active(size, false);
     int active_count = 0;
-
+    std::optional<int> prev{std::nullopt};
     for (size_t i = 0; i < size; ++i) {
         if (*(task.inputs[i]) >> nums[i]) {
             active[i] = true;
@@ -156,7 +149,9 @@ void TapePool::perform_kway_merge(const MergeTask& task) {
     }
     while (active_count > 0) {
         size_t idx = findMin(nums, active);
+        if(prev != std::nullopt) assert(prev.value() <= nums[idx]);
         *(task.output) << nums[idx];
+        prev = nums[idx];
         if (!(*(task.inputs[idx]) >> nums[idx])) {
             active[idx] = false; 
             active_count--;
