@@ -1,7 +1,7 @@
 #include "Tape.h"
 
 Tape::Tape(const std::string& file, const Latencies& latency)
-    : filename(file), stream(filename, std::ios::in | std::ios::out | std::ios::app) {  
+    : filename(file), stream(filename, std::ios::in | std::ios::out | std::ios::app), latency_m(latency) {  
     if (!stream.is_open()) { 
         stream.open(filename, std::ios::out);  
         stream.close();

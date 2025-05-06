@@ -2,7 +2,7 @@
 
 Processer::Processer(int memory, int number, const std::string& path, const std::string& input, const std::string& output, const std::string& latencies)
 :M(memory), N(number), input_dir(path + "input/"),
- output_dir(path + "output/"), tmp_dir(path + "tmp/"), input_name(input), output_name(output) {
+ output_dir(path + "output/"), tmp_dir(path + "tmp/"), input_name(input), output_name(output), latency_file(path + latencies) {
     parseLatency(latencies);
     prepareTempDirectory(tmp_dir);
     generateRandomInputFile(input_dir + input_name, N);
@@ -52,7 +52,7 @@ void Processer::checkSortition() {
 }
 
 void Processer::parseLatency(const std::string& file) {
-    std::ifstream config(file);
+    std::ifstream config(latency_file);
     std::string buffer;
     while(std::getline(config, buffer)) {
         std::stringstream ss(buffer);
